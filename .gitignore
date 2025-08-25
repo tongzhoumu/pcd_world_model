@@ -1,0 +1,7 @@
+*.json
+videos/*
+ManiSkill
+debug/*
+__pycache__/*
+.vscode/*
+*.pyc
