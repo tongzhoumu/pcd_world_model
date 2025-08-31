@@ -69,7 +69,8 @@ class DexPushTEnv(PushTEnv):
     def _initialize_episode(self, *args, **kwargs):
         super()._initialize_episode(*args, **kwargs)
         qpos = self.agent.get_proprioception()["qpos"]
-        qpos[:,:2] = self.tee.pose.p[:,:2] # xy
+        # qpos[:,:2] = self.tee.pose.p[:,:2] # xy
+        qpos[:, :2] = torch.rand(1, 2) * 0.8 - 0.4 # xy in [-0.4, 0.4]
         qpos[:, 2] = 0.2 # z
         qpos[:, 4] = np.pi # fingers down
         self.agent.reset(qpos)
@@ -122,6 +123,17 @@ class DexPushTEnv(PushTEnv):
         # # visualize the point cloud
         # trimesh.PointCloud(self.tee_pcd).show()
         # breakpoint()
+
+        # Reset robot initial position
+        min_z = np.inf
+        for pcd, link in zip(self.robot_link_pcds, self.agent.robot.links):
+            if pcd is not None:
+                T = link.pose.to_transformation_matrix()[0].numpy()
+                pcd = transform_points_np(T, np.array(pcd))
+                min_z = min(min_z, pcd[:, 2].min())
+        qpos = self.agent.get_proprioception()["qpos"]
+        qpos[:, 2] = qpos[:, 2] - min_z + 0.001
+        self.agent.reset(qpos)
 
     def _load_scene(self, options: dict):
         # have to put these parmaeters to device - defined before we had access to device
