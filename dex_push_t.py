@@ -8,10 +8,8 @@ import trimesh
 from mani_skill.envs.tasks.tabletop.push_t import PushTEnv, WhiteTableSceneBuilder
 from mani_skill.utils.registration import register_env
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.geometry.trimesh_utils import merge_meshes
 
-from robots.floating_allegro import FloatingAllegroHandRight
-from robots.floating_ability import FloatingAbilityHandRight
+from robots.floating_dex_hand_base import FloatingDexHandBase
 
 def transform_points_np(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
     assert H.shape == (4, 4), H.shape
@@ -22,8 +20,14 @@ def transform_points_np(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
 class DexPushTEnv(PushTEnv):
 
 
-    SUPPORTED_ROBOTS = ["floating_allegro_hand_right", "floating_ability_hand_right"]
-    agent: FloatingAllegroHandRight | FloatingAbilityHandRight
+    SUPPORTED_ROBOTS = [
+        "floating_allegro_hand_right",
+        "floating_ability_hand_right",
+        "floating_leap_hand_right",
+        "floating_shadow_hand_right",
+        "floating_xhand_right",
+    ]
+    agent: FloatingDexHandBase
 
     def __init__(
         self, *args, robot_uids="floating_allegro_hand_right", **kwargs
