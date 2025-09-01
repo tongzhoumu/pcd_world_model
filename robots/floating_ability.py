@@ -13,32 +13,24 @@ from mani_skill.utils.structs.pose import vectorize_pose
 
 
 @register_agent()
-class FloatingAllegroHandRight(BaseAgent):
-    uid = "floating_allegro_hand_right"
-    urdf_path = f"./assets/robot_hand_urdf/allegro_hand_urdf/allegro_hand_right_floating.urdf"
+class FloatingAbilityHandRight(BaseAgent):
+    uid = "floating_ability_hand_right"
+    urdf_path = f"./assets/robot_hand_urdf/ability_hand_urdf/ability_hand_right_floating.urdf"
     urdf_config = dict(
         _materials=dict(
             tip=dict(static_friction=2.0, dynamic_friction=1.0, restitution=0.0)
         ),
         link={
-            "link_3_0_tip": dict(
-                material="tip", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            "link_7_0_tip": dict(
-                material="tip", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            "link_11_0_tip": dict(
-                material="tip", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            "link_15_0_tip": dict(
-                material="tip", patch_radius=0.1, min_patch_radius=0.1
-            ),
+            # fingertips
+            "thumb_tip": dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
+            "index_tip": dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
+            "middle_tip": dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
+            "ring_tip": dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
+            # optionally include pinky tip if needed
+            # "pinky_tip": dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
         },
     )
     disable_self_collisions = True
-    # you could model all of the fingers and disable certain impossible self collisions that occur
-    # but it is simpler and faster to just disable all self collisions. It is highly unlikely the hand self-collides to begin with
-    # due to the design of the hand
 
     root_joint_names = [
         "root_x_axis_joint",
@@ -52,48 +44,44 @@ class FloatingAllegroHandRight(BaseAgent):
     keyframes = dict(
         fingers_down=Keyframe(
             qpos=np.concatenate([
-                np.array([0, 0, 0.3, 0, np.pi, 0]), np.zeros(16)
+                np.array([0, 0, 0.3, 0, np.pi, 0]), np.zeros(10)
             ]),
             pose=sapien.Pose([0, 0, 0], q=[1, 0, 0, 0]),
         ),
     )
 
     def __init__(self, *args, **kwargs):
+        # Ability hand DOFs: 10 finger joints (2 per finger across 5 fingers with some mimics)
         self.joint_names = [
-            "joint_0_0",
-            "joint_1_0",
-            "joint_2_0",
-            "joint_3_0",
-            "joint_4_0",
-            "joint_5_0",
-            "joint_6_0",
-            "joint_7_0",
-            "joint_8_0",
-            "joint_9_0",
-            "joint_10_0",
-            "joint_11_0",
-            "joint_12_0",
-            "joint_13_0",
-            "joint_14_0",
-            "joint_15_0",
+            "thumb_q1",
+            "thumb_q2",
+            "index_q1",
+            "index_q2",
+            "middle_q1",
+            "middle_q2",
+            "ring_q1",
+            "ring_q2",
+            "pinky_q1",
+            "pinky_q2",
         ]
 
-        # self.joint_stiffness = 4e2
-        # self.joint_damping = 1e1
         self.joint_force_limit = 5e1
         self.finger_joint_stiffness = self.float_joint_stiffness = 1e4
         self.finger_joint_damping = self.float_joint_damping = 1e3
         self.finger_joint_force_limit = self.float_joint_force_limit = 1e2
 
-        # Order: thumb finger, index finger, middle finger, ring finger
+        # Order: thumb, index, middle, ring
         self.tip_link_names = [
-            "link_15_0_tip",
-            "link_3_0_tip",
-            "link_7_0_tip",
-            "link_11_0_tip",
+            "thumb_tip",
+            "index_tip",
+            "middle_tip",
+            "ring_tip",
+            # optionally include pinky tip if desired
+            # "pinky_tip",
         ]
 
-        self.palm_link_name = "palm"
+        # thumb_base corresponds to palm mesh in the URDF
+        self.palm_link_name = "thumb_base"
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
@@ -106,9 +94,6 @@ class FloatingAllegroHandRight(BaseAgent):
 
     @property
     def _controller_configs(self):
-        # -------------------------------------------------------------------------- #
-        # Arm
-        # -------------------------------------------------------------------------- #
         float_pd_joint_pos = PDJointPosControllerConfig(
             joint_names=self.root_joint_names,
             lower=None,
@@ -156,13 +141,9 @@ class FloatingAllegroHandRight(BaseAgent):
             ),
         )
 
-        # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
     def get_proprioception(self):
-        """
-        Get the proprioceptive state of the agent.
-        """
         obs = super().get_proprioception()
         obs.update(
             {
@@ -170,14 +151,10 @@ class FloatingAllegroHandRight(BaseAgent):
                 "tip_poses": self.tip_poses.reshape(-1, len(self.tip_links) * 7),
             }
         )
-
         return obs
 
     @property
     def tip_poses(self):
-        """
-        Get the tip pose for each of the finger, four fingers in total
-        """
         tip_poses = [
             vectorize_pose(link.pose, device=self.device) for link in self.tip_links
         ]
@@ -185,7 +162,6 @@ class FloatingAllegroHandRight(BaseAgent):
 
     @property
     def palm_pose(self):
-        """
-        Get the palm pose for allegro hand
-        """
         return vectorize_pose(self.palm_link.pose, device=self.device)
+
+

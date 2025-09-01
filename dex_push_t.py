@@ -11,6 +11,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.geometry.trimesh_utils import merge_meshes
 
 from robots.floating_allegro import FloatingAllegroHandRight
+from robots.floating_ability import FloatingAbilityHandRight
 
 def transform_points_np(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
     assert H.shape == (4, 4), H.shape
@@ -21,8 +22,8 @@ def transform_points_np(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
 class DexPushTEnv(PushTEnv):
 
 
-    SUPPORTED_ROBOTS = ["floating_allegro_hand_right"]
-    agent: FloatingAllegroHandRight
+    SUPPORTED_ROBOTS = ["floating_allegro_hand_right", "floating_ability_hand_right"]
+    agent: FloatingAllegroHandRight | FloatingAbilityHandRight
 
     def __init__(
         self, *args, robot_uids="floating_allegro_hand_right", **kwargs
@@ -68,12 +69,6 @@ class DexPushTEnv(PushTEnv):
 
     def _initialize_episode(self, *args, **kwargs):
         super()._initialize_episode(*args, **kwargs)
-        qpos = self.agent.get_proprioception()["qpos"]
-        # qpos[:,:2] = self.tee.pose.p[:,:2] # xy
-        qpos[:, :2] = torch.rand(1, 2) * 0.8 - 0.4 # xy in [-0.4, 0.4]
-        qpos[:, 2] = 0.2 # z
-        qpos[:, 4] = np.pi # fingers down
-        self.agent.reset(qpos)
 
         # prepare point cloud
         if not hasattr(self, "robot_link_meshes"):
@@ -125,14 +120,17 @@ class DexPushTEnv(PushTEnv):
         # breakpoint()
 
         # Reset robot initial position
+        qpos = self.agent.keyframes["fingers_down"].qpos
+        qpos[:2] = torch.rand(2) * 0.8 - 0.4 # xy in [-0.4, 0.4]
+        self.agent.reset(qpos)
+    
         min_z = np.inf
         for pcd, link in zip(self.robot_link_pcds, self.agent.robot.links):
             if pcd is not None:
                 T = link.pose.to_transformation_matrix()[0].numpy()
                 pcd = transform_points_np(T, np.array(pcd))
                 min_z = min(min_z, pcd[:, 2].min())
-        qpos = self.agent.get_proprioception()["qpos"]
-        qpos[:, 2] = qpos[:, 2] - min_z + 0.001
+        qpos[2] = qpos[2] - min_z + 0.001
         self.agent.reset(qpos)
 
     def _load_scene(self, options: dict):
