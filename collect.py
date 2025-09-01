@@ -125,8 +125,8 @@ def cpu_make_env(env_id, seed, video_dir=None, env_kwargs = dict(), wrappers: li
 
 
 if __name__ == "__main__":
-    # robot_uids = "floating_allegro_hand_right"
-    robot_uids = "floating_ability_hand_right"
+    robot_uids = "floating_allegro_hand_right"
+    # robot_uids = "floating_ability_hand_right"
     
     print("Keyboard Controls: WASD to move, QE to move up and down, R to reset, ESC to quit")
     print("Press keys directly in the terminal (no need to press Enter)")
